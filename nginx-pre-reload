@@ -5,6 +5,7 @@ source "$PLUGIN_CORE_AVAILABLE_PATH/common/functions"
 nginx-pre-reload() {
     local APP="$1"; verify_app_name "$APP"
     local SCRIPT_PATH="$DOKKU_ROOT/$APP/PRE_RELOAD_SCRIPT"
+    local DOKKU_APP_LISTENERS=$(plugn trigger network-get-listeners "$APP" "web")
 
     dokku_log_info1 "Checking for pre-reload script..."
 
@@ -15,7 +16,7 @@ nginx-pre-reload() {
     fi
 
     dokku_log_info1 "Executing pre-reload script..."
-    local OUTPUT=$(source "$SCRIPT_PATH")
+    local OUTPUT=$(source "$SCRIPT_PATH" "$APP" "$DOKKU_APP_LISTENERS")
     dokku_log_verbose_quiet "$OUTPUT"
 }
 
