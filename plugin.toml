@@ -1,4 +1,5 @@
 [plugin]
-description="Dokku plugin to execute script on dokku host before nginx reload"
-version="0.1.0"
+description="Dokku plugin to provide custom nginx configurations and execute scripts on dokku host before the nginx configuration is reloaded."
+version="1.0.0"
+
 [plugin.config]

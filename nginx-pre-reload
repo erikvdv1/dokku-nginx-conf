@@ -1,23 +1,26 @@
 #!/usr/bin/env bash
 set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
 source "$PLUGIN_CORE_AVAILABLE_PATH/common/functions"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/functions"
 
 nginx-pre-reload() {
     local APP="$1"; verify_app_name "$APP"
-    local SCRIPT_PATH="$DOKKU_ROOT/$APP/PRE_RELOAD_SCRIPT"
+    local SCRIPT_DIR="$DOKKU_ROOT/$APP/scripts/nginx-pre-reload.d"
     local DOKKU_APP_LISTENERS=$(plugn trigger network-get-listeners "$APP" "web")
+    local NGINX_CONF="$DOKKU_ROOT/$APP/nginx.conf"
 
-    dokku_log_info1 "Checking for pre-reload script..."
+    dokku_log_verbose_stderr_quiet "Checking for nginx-pre-reload script ..."
 
-    # No script found abort
-    if [[ ! -f "$SCRIPT_PATH" ]]; then
-        dokku_log_info1 "No pre-reload script found."
+    # Check if script directory exists
+    if [[ ! -d "$SCRIPT_DIR" ]]; then
+        dokku_log_verbose_stderr_quiet "No scripts found."
         return 0
     fi
 
-    dokku_log_info1 "Executing pre-reload script..."
-    local OUTPUT=$(source "$SCRIPT_PATH" "$APP" "$DOKKU_APP_LISTENERS")
-    dokku_log_verbose_quiet "$OUTPUT"
+    dokku_log_verbose_stderr_quiet "Running nginx-pre-reload scripts in $SCRIPT_DIR ..."
+
+    # Run scripts
+    run_scripts_in_dir "$SCRIPT_DIR" "$APP" "$NGINX_CONF" "$DOKKU_APP_LISTENERS"
 }
 
 nginx-pre-reload "$@"

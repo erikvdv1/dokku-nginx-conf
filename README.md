@@ -1,29 +1,60 @@
-# dokku-pre-reload-script
+# dokku-nginx-conf
 
-inspired by the [dokku-post-deploy-script plugin](https://github.com/baikunz/dokku-post-deploy-script) by @baikunz.
+Inspired by the [dokku-post-deploy-script plugin](https://github.com/baikunz/dokku-post-deploy-script) by @baikunz.
 
 ---
 
-Dokku plugin to execute scripts on dokku host before nginx reload
+Dokku plugin to provide custom nginx configurations and execute scripts on dokku host before the nginx configuration is reloaded.
 
-## requirements
+## Requirements
 
 - dokku 0.4.0+
 
-## installation
+## Installation
 
 ```shell
 # on 0.4.x
-dokku plugin:install https://github.com/erikvdv1/dokku-pre-reload-script.git pre-reload-script
+dokku plugin:install https://github.com/erikvdv1/dokku-nginx-conf.git nginx-conf
 ```
 
-## hooks
+## Usage
+This plugin provides two main features:
 
-This plugin provides hooks:
+* It lets you specify custom nginx configuration templates.
+* It lets you execute scripts on the host to transform the nginx configuration files.
 
-* `nginx-pre-reload`: Execute script on dokku host before nginx reload
+### Custom templates
 
-## usage
-This plugin allows you to execute on your host a script which reside in the `$DOKKU_ROOT/$APP/` after a deploy.
+With this plugin you can load a custom nginx configuration template.
+Put your configuration template in the following locations:
 
-The file must be named `PRE_RELOAD_SCRIPT`.
+* Template: `$DOKKU_ROOT/$APP/templates/nginx.conf.sigil`
+* Template: `$DOKKU_ROOT/$APP/templates/hsts.conf.sigil`
+* Template: `$DOKKU_ROOT/$APP/templates/validate.conf.sigil`
+
+The default nginx configuration templates can be found on [dokku/dokku](https://github.com/dokku/dokku/tree/master/plugins/nginx-vhosts/templates).
+
+### Executing scripts
+
+The plugin also provides the functionality to execute scripts on the host during deploy.
+Put your script in one of the following locations.
+
+* Directory: `$DOKKU_ROOT/$APP/scripts/nginx-app-conf.d/`  
+  Script must have the `.sh` file extension.
+  Scripts receive the following arguments: `$APP $NGINX_TEMPLATE`
+* Directory: `$DOKKU_ROOT/$APP/scripts/nginx-hsts-conf.d/`  
+  Script must have the `.sh` file extension.
+  Scripts receive the following arguments: `$APP $NGINX_TEMPLATE`
+* Directory: `$DOKKU_ROOT/$APP/scripts/nginx-validate-conf.d/`  
+  Script must have the `.sh` file extension.
+  Scripts receive the following arguments: `$APP $NGINX_TEMPLATE`
+* Directory: `$DOKKU_ROOT/$APP/scripts/nginx-pre-reload-conf.d/`  
+  Script must have the `.sh` file extension.
+  Scripts receive the following arguments: `$APP $NGINX_CONF $DOKKU_APP_LISTENERS`
+
+## Hooks
+
+To achieve its goals this plugin uses two hooks:
+
+* `nginx-app-template-source`: Execute scripts on dokku host when the nginx configuration template is loaded.
+* `nginx-pre-reload`: Execute scripts on dokku host before the nginx configuration is reloaded.

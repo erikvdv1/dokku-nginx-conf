@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+source "$PLUGIN_CORE_AVAILABLE_PATH/common/functions"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/functions"
+
+nginx-app-template-source() {
+    local APP="$1"; verify_app_name "$APP"
+    local TEMPLATE_TYPE="$2"
+    local SCRIPT_DIR="$DOKKU_ROOT/$APP/scripts"
+    local TEMPLATE_SOURCE_DIR="$DOKKU_ROOT/$APP/templates"
+    local TEMPLATE_TARGET_DIR="$TEMPLATE_SOURCE_DIR/.target"
+    local TEMPLATE_BUILTIN_DIR="$PLUGIN_CORE_AVAILABLE_PATH/nginx-vhosts/templates"
+    local TEMPLATE_NAME=""
+    local TEMPLATE_SOURCE_FILE=""
+    local TEMPLATE_TARGET_FILE=""
+
+    dokku_log_verbose_stderr_quiet "Checking for nginx-$TEMPLATE_TYPE template scripts..."
+
+    case "$TEMPLATE_TYPE" in
+    app-config)
+        SCRIPT_DIR="$SCRIPT_DIR/nginx-app-conf.d"
+        TEMPLATE_NAME="nginx.conf.sigil"
+        ;;
+    hsts-config)
+        SCRIPT_DIR="$SCRIPT_DIR/nginx-hsts-conf.d"
+        TEMPLATE_NAME="hsts.conf.sigil"
+        ;;
+    validate-config)
+        SCRIPT_DIR="$SCRIPT_DIR/nginx-validate-conf.d"
+        TEMPLATE_NAME="validate.conf.sigil"
+        ;;
+    *)
+        dokku_log_fail "Invalid template type: ${TEMPLATE_TYPE}"
+        return 1
+    esac
+
+    # Check if custom template exists
+    if [[ -f "$TEMPLATE_SOURCE_DIR/$TEMPLATE_NAME" ]]; then
+        dokku_log_verbose_stderr_quiet "Using custom nginx-$TEMPLATE_TYPE template."
+        TEMPLATE_SOURCE_FILE="$TEMPLATE_SOURCE_DIR/$TEMPLATE_NAME"
+    fi
+
+    # Check if script directory exists
+    if [[ ! -d "$SCRIPT_DIR" ]]; then
+        dokku_log_verbose_stderr_quiet "No scripts found."
+        echo "$TEMPLATE_SOURCE_FILE"
+        return 0
+    fi
+
+    # Use built-in template
+    if [[ -z "$TEMPLATE_SOURCE_FILE" ]]; then
+        TEMPLATE_SOURCE_FILE="$TEMPLATE_BUILTIN_DIR/$TEMPLATE_NAME"
+    fi
+
+    # Copy base template
+    TEMPLATE_TARGET_FILE="$TEMPLATE_TARGET_DIR/$TEMPLATE_NAME"
+    mkdir -p "$TEMPLATE_TARGET_DIR"
+    cp "$TEMPLATE_SOURCE_FILE" "$TEMPLATE_TARGET_FILE"
+
+    dokku_log_verbose_stderr_quiet "Running nginx-$TEMPLATE_TYPE scripts in $SCRIPT_DIR ..."
+
+    # Run scripts
+    run_scripts_in_dir "$SCRIPT_DIR" "$APP" "$TEMPLATE_TARGET_FILE"
+
+    echo "$TEMPLATE_TARGET_FILE"
+}
+
+echo $(nginx-app-template-source "$@")

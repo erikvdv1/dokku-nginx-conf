@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+source "$PLUGIN_CORE_AVAILABLE_PATH/common/functions"
+
+dokku_log_verbose_stderr_quiet() {
+    if [[ -z "$DOKKU_QUIET_OUTPUT" ]]; then
+        dokku_log_stderr "       $@"
+    fi
+}
+
+run_scripts_in_dir() {
+    local SCRIPT_DIR=$1
+    shift
+    for script in $(find $SCRIPT_DIR -name '*.sh'); do
+        local OUTPUT=$(source "$script" "$@")
+        dokku_log_verbose_stderr_quiet "$OUTPUT"
+    done
+}
